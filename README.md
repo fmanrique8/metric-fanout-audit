@@ -4,6 +4,8 @@ Two orders total **$120.00**. A left join to refund events makes the same order 
 
 Metric Fanout Audit checks one additive fact metric against an ordered set of left joins. It reports the first join that multiplies fact rows, the affected keys, and the exact change in the metric.
 
+Read the SQL walkthrough and grain-preserving repair in the [companion article on fmanrique.com](https://fmanrique.com/blog/when-a-join-inflates-your-metrics/).
+
 ## Run the demo
 
 From the repository root with Python 3.11+ and [uv](https://docs.astral.sh/uv/getting-started/installation/):
