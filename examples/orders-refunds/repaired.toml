@@ -1,0 +1,11 @@
+[fact]
+name = "orders"
+csv = "orders.csv"
+key = "order_id"
+metric = "order_total"
+
+[[joins]]
+name = "refunds_by_order"
+csv = "refunds-by-order.csv"
+fact_column = "order_id"
+right_column = "order_id"
