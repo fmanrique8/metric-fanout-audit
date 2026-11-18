@@ -37,6 +37,16 @@ OK  orders -> refunds_by_order  rows 2 -> 2  order_total 120.00 -> 120.00
 
 This run exits `0`. Add `--json` to either command for CI output. Invalid configuration, missing columns, duplicate or empty fact keys, and invalid metric values exit `2` with a diagnostic on stderr.
 
+### When the totals still agree
+
+Two adjustments of `+100.00` and `-100.00` each have two matching labels. The left join doubles the row count from two to four. The total stays `0.00` because the duplicate amounts cancel.
+
+```sh
+uv run --locked fanout-audit check examples/signed-adjustments/fanout.toml
+```
+
+The check exits `1` and identifies both duplicated keys, `201` and `202`. Aggregating the [fixture rows](examples/signed-adjustments/) in SQLite reproduces the same totals and row counts.
+
 ## Audit another join
 
 Copy the [example TOML](examples/orders-refunds/fanout.toml). Set the fact CSV, its unique key, and a numeric column whose values have meaning when summed once per fact row. For each `[[joins]]`, name the right CSV and declare the two columns used in the equality predicate. Relative paths resolve from the TOML file. Join keys are case-sensitive text, so `001` and `1` are separate values. An empty join key has SQL `NULL` behavior. Amounts are fixed-point decimals with up to 18 integer digits and 6 fractional digits.
@@ -51,4 +61,6 @@ The audit covers single-column keys, local CSV snapshots, and one additive metri
 uv run --locked python -m unittest discover -s tests -v
 ```
 
-The tests compare the two demo totals against actual SQLite joins. They also check cumulative fanout, unmatched and empty keys, leading zeros, decimal precision, and offsetting amounts.
+The tests compare the three demo totals against actual SQLite joins. They also check cumulative fanout, unmatched and empty keys, leading zeros, decimal precision, and offsetting amounts.
+
+Source code is available under the [MIT License](LICENSE).

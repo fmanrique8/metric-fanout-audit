@@ -1,0 +1,11 @@
+[fact]
+name = "adjustments"
+csv = "adjustments.csv"
+key = "adjustment_id"
+metric = "amount"
+
+[[joins]]
+name = "labels"
+csv = "labels.csv"
+fact_column = "adjustment_id"
+right_column = "adjustment_id"
