@@ -11,10 +11,42 @@ from fanout_audit.audit import Join, Scenario, audit, read_scenario
 from fanout_audit.cli import main
 
 
-DEMO = Path(__file__).resolve().parents[1] / "examples" / "orders-refunds"
+EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+DEMO = EXAMPLES / "orders-refunds"
 
 
 class DemoTests(unittest.TestCase):
+    def test_signed_adjustments_report_matches_sql(self):
+        demo = EXAMPLES / "signed-adjustments"
+        with sqlite3.connect(":memory:") as db:
+            db.executescript("""
+                create table adjustments (adjustment_id text primary key, amount_cents integer);
+                create table labels (adjustment_id text, label text);
+            """)
+            with (demo / "adjustments.csv").open(newline="") as facts:
+                db.executemany("insert into adjustments values (?, ?)", (
+                    (row["adjustment_id"], int(row["amount"].replace(".", "")))
+                    for row in csv.DictReader(facts)
+                ))
+            with (demo / "labels.csv").open(newline="") as labels:
+                db.executemany("insert into labels values (?, ?)", (
+                    (row["adjustment_id"], row["label"]) for row in csv.DictReader(labels)
+                ))
+            before = db.execute("select count(*), sum(amount_cents) from adjustments").fetchone()
+            after = db.execute("""
+                select count(*), sum(amount_cents)
+                from adjustments left join labels using (adjustment_id)
+            """).fetchone()
+            self.assertEqual(before, (2, 0))
+            self.assertEqual(after, (4, 0))
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["check", str(demo / "fanout.toml"), "--json"]), 1)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["first_fanout"], "labels")
+        self.assertEqual(report["final"], {"rows": after[0], "total": "0.00"})
+        self.assertEqual([(row["key"], row["delta"]) for row in report["stages"][0]["affected"]],
+                         [("201", "100.00"), ("202", "-100.00")])
+
     def test_failing_and_repaired_reports_match_sql(self):
         with sqlite3.connect(":memory:") as db:
             db.executescript("""
